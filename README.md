@@ -58,3 +58,6 @@ kimcp shutdown
 mise run setup
 mise run ci
 ```
+
+Open work lives in [`tasks/`](tasks/), one file per task with its background, steps and
+completion condition. Delete the file when the task is done.
