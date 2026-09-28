@@ -31,7 +31,7 @@ async def run_tool(
         raise HTTPException(status_code=404, detail="Tool not found.")
 
     try:
-        result = await tool.ainvoke(request.args)
+        result = await client.call_tool(server_name, tool_name, request.args)
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
@@ -39,5 +39,5 @@ async def run_tool(
         "agent_id": agent_id,
         "server_name": server_name,
         "tool_name": tool_name,
-        "result": result,
+        "result": result.model_dump(mode="json", by_alias=True, exclude_none=True),
     }

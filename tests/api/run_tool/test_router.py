@@ -21,13 +21,30 @@ async def test_run_tool_executes_tool(
     assert data["agent_id"] == "test-agent"
     assert data["server_name"] == "math"
     assert data["tool_name"] == "add"
-    assert data["result"] == [
-        {
-            "id": data["result"][0]["id"],
-            "text": "5",
-            "type": "text",
-        }
-    ]
+    assert data["result"]["content"] == [{"type": "text", "text": "5"}]
+    assert data["result"]["structuredContent"] == {"result": 5}
+    assert data["result"]["isError"] is False
+
+
+async def test_run_tool_returns_tool_errors_as_results(
+    client: httpx.AsyncClient,
+    math_mcp_server,
+) -> None:
+    connect_response = await client.post(
+        "/agents/test-agent/mcp-servers",
+        json=math_mcp_server,
+    )
+    assert connect_response.status_code == 200
+
+    response = await client.post(
+        "/agents/test-agent/mcp-servers/math/tools/fail/run",
+        json={"args": {}},
+    )
+
+    assert response.status_code == 200
+    result = response.json()["result"]
+    assert result["isError"] is True
+    assert result["content"][0]["type"] == "text"
 
 
 async def test_run_tool_returns_404_for_unknown_tool(

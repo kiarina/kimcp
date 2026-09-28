@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 
 from kimcp.core.app import AgentID
 from kimcp.core.mcp_client import mcp_client_registry
@@ -9,9 +9,16 @@ router = APIRouter()
 
 @router.post("/agents/{agent_id}/mcp-servers")
 async def connect(agent_id: AgentID, server: MCPServer) -> dict:
-    mcp_server_registry.register(agent_id=agent_id, server=server)
     client = mcp_client_registry.ensure(agent_id=agent_id)
-    await client.connect(server)
+    try:
+        await client.connect(server)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Failed to connect to MCP server {server.server_name}: {exc}",
+        ) from exc
+
+    mcp_server_registry.register(agent_id=agent_id, server=server)
 
     return {
         "agent_id": agent_id,

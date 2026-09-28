@@ -47,5 +47,5 @@ def test_list_tools_calls_gateway(
     assert result.exit_code == 0
     data = json.loads(result.output)
     assert data["agent_id"] == agent_id
-    assert [tool["name"] for tool in data["tools"]] == ["add", "multiply"]
+    assert [tool["name"] for tool in data["tools"]] == ["add", "multiply", "pid", "fail"]
     assert all(tool["server_name"] == "math" for tool in data["tools"])

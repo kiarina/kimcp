@@ -18,8 +18,13 @@ async def test_list_tools_returns_server_tools(
     data = response.json()
 
     assert data["agent_id"] == "test-agent"
-    assert [tool["name"] for tool in data["tools"]] == ["add", "multiply"]
+    assert [tool["name"] for tool in data["tools"]] == ["add", "multiply", "pid", "fail"]
     assert all(tool["server_name"] == "math" for tool in data["tools"])
+
+    add = data["tools"][0]
+    assert add["description"] == "Add two numbers"
+    assert add["inputSchema"]["properties"].keys() == {"a", "b"}
+    assert add["inputSchema"]["required"] == ["a", "b"]
 
 
 async def test_list_tools_returns_404_for_unknown_server(

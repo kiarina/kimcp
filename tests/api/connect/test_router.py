@@ -29,3 +29,21 @@ async def test_invalid_payload(client: httpx.AsyncClient) -> None:
     )
 
     assert response.status_code == 422
+
+
+async def test_connect_failure_does_not_register(client: httpx.AsyncClient) -> None:
+    response = await client.post(
+        "/agents/test-agent/mcp-servers",
+        json={
+            "server_name": "broken",
+            "connection": {
+                "transport": "stdio",
+                "command": "kimcp-command-that-does-not-exist",
+            },
+        },
+    )
+
+    assert response.status_code == 502
+    assert response.json()["detail"].startswith("Failed to connect to MCP server broken")
+    assert mcp_server_registry.get(agent_id="test-agent", server_name="broken") is None
+    assert mcp_client_registry.ensure("test-agent").sessions.get("broken") is None

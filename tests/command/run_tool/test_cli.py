@@ -53,4 +53,5 @@ def test_run_tool_calls_gateway(
     assert data["agent_id"] == agent_id
     assert data["server_name"] == "math"
     assert data["tool_name"] == "add"
-    assert data["result"][0]["text"] == "3"
+    assert data["result"]["content"] == [{"type": "text", "text": "3"}]
+    assert data["result"]["isError"] is False

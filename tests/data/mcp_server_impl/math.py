@@ -1,8 +1,9 @@
 import argparse
+import os
 
-from mcp.server.fastmcp import FastMCP
+from mcp.server.mcpserver import MCPServer
 
-mcp = FastMCP("Math")
+mcp = MCPServer("Math")
 
 
 @mcp.tool()
@@ -17,6 +18,18 @@ def multiply(a: int, b: int) -> int:
     return a * b
 
 
+@mcp.tool()
+def pid() -> int:
+    """Return the server process id"""
+    return os.getpid()
+
+
+@mcp.tool()
+def fail() -> str:
+    """Always fail"""
+    raise ValueError("boom")
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -26,9 +39,9 @@ if __name__ == "__main__":
     )
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8000)
-    parser.add_argument("--mount-path")
     args = parser.parse_args()
 
-    mcp.settings.host = args.host
-    mcp.settings.port = args.port
-    mcp.run(transport=args.transport, mount_path=args.mount_path)
+    if args.transport == "stdio":
+        mcp.run("stdio")
+    else:
+        mcp.run(args.transport, host=args.host, port=args.port)

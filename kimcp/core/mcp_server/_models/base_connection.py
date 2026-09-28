@@ -1,28 +1,23 @@
-from typing import Any, cast
+from contextlib import AsyncExitStack
+from typing import Any
 
-from langchain_mcp_adapters.sessions import (
-    Connection,
-    SSEConnection,
-    StdioConnection,
-    StreamableHttpConnection,
-)
+from mcp.client import Transport as MCPTransport
+from mcp.client.stdio import StdioServerParameters
 from pydantic import BaseModel, Field
 
 from .._types.transport import Transport
+
+type ClientTarget = StdioServerParameters | MCPTransport
 
 
 class BaseConnection(BaseModel):
     transport: Transport = Field(frozen=True)
     session_kwargs: dict[str, Any] = Field(default_factory=dict)
 
-    def to_connection(self) -> Connection:
-        connection = {k: v for k, v in self.model_dump().items() if v is not None}
+    async def enter_client_target(self, stack: AsyncExitStack) -> ClientTarget:
+        """Build what `mcp.Client` connects to.
 
-        if self.transport == "sse":
-            return cast(SSEConnection, connection)
-        elif self.transport == "stdio":
-            return cast(StdioConnection, connection)
-        elif self.transport == "streamable_http":
-            return cast(StreamableHttpConnection, connection)
-        else:  # pragma: no cover
-            raise AssertionError(f"Unsupported transport: {self.transport}")
+        Anything that must outlive the session (such as an HTTP client) is
+        registered on `stack`, which the session owner closes on disconnect.
+        """
+        raise NotImplementedError  # pragma: no cover

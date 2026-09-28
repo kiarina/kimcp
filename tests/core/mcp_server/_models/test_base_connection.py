@@ -1,63 +1,50 @@
-import pytest
+from contextlib import AsyncExitStack
 
-from kimcp.core.mcp_server._models.sse_connection import SSEConnection
-from kimcp.core.mcp_server._models.stdio_connection import StdioConnection
-from kimcp.core.mcp_server._models.streamable_http_connection import (
-    StreamableHTTPConnection,
-)
+from mcp.client.stdio import StdioServerParameters
+
+from kimcp.core.mcp_server import SSEConnection, StdioConnection, StreamableHTTPConnection
 
 
-@pytest.mark.parametrize(
-    ("connection", "expected"),
-    [
-        (
-            SSEConnection(
-                url="http://example.com/sse",
-                headers={"Authorization": "Bearer token"},
-                timeout=None,
-                sse_read_timeout=30.0,
-            ),
-            {
-                "transport": "sse",
-                "url": "http://example.com/sse",
-                "headers": {"Authorization": "Bearer token"},
-                "session_kwargs": {},
-                "sse_read_timeout": 30.0,
-            },
-        ),
-        (
-            StdioConnection(
-                command="uvx",
-                args=["mcp-server"],
-                cwd=None,
-                encoding="utf-8",
-            ),
-            {
-                "transport": "stdio",
-                "command": "uvx",
-                "args": ["mcp-server"],
-                "env": {},
-                "session_kwargs": {},
-                "encoding": "utf-8",
-            },
-        ),
-        (
-            StreamableHTTPConnection(
-                url="http://example.com/mcp",
-                timeout=10.0,
-                sse_read_timeout=None,
-                terminate_on_close=True,
-            ),
-            {
-                "transport": "streamable_http",
-                "url": "http://example.com/mcp",
-                "headers": {},
-                "timeout": 10.0,
-                "terminate_on_close": True,
-                "session_kwargs": {},
-            },
-        ),
-    ],
-)
-def test_to_connection_returns_transport_specific_payload(connection, expected) -> None:
-    assert connection.to_connection() == expected
+async def test_stdio_connection_builds_server_parameters() -> None:
+    connection = StdioConnection(
+        command="uvx",
+        args=["mcp-server"],
+        env={"TOKEN": "x"},
+        cwd="/tmp",
+        encoding="latin-1",
+    )
+
+    async with AsyncExitStack() as stack:
+        target = await connection.enter_client_target(stack)
+
+    assert isinstance(target, StdioServerParameters)
+    assert target.command == "uvx"
+    assert target.args == ["mcp-server"]
+    assert target.env == {"TOKEN": "x"}
+    assert target.cwd == "/tmp"
+    assert target.encoding == "latin-1"
+
+
+async def test_stdio_connection_defaults() -> None:
+    async with AsyncExitStack() as stack:
+        target = await StdioConnection(command="uvx").enter_client_target(stack)
+
+    assert isinstance(target, StdioServerParameters)
+    assert target.env is None
+    assert target.encoding == "utf-8"
+
+
+async def test_http_connections_build_transports() -> None:
+    sse = SSEConnection(url="http://example.com/sse", timeout=10, sse_read_timeout=20)
+    http = StreamableHTTPConnection(
+        url="http://example.com/mcp",
+        headers={"X-Test": "1"},
+        timeout=10,
+        sse_read_timeout=20,
+        terminate_on_close=False,
+    )
+
+    async with AsyncExitStack() as stack:
+        # Transports are async context managers; building them opens no connection.
+        assert hasattr(await sse.enter_client_target(stack), "__aenter__")
+        assert hasattr(await http.enter_client_target(stack), "__aenter__")
