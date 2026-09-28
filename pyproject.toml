@@ -1,6 +1,6 @@
 [project]
 name = "kimcp"
-version = "0.1.0"
+version = "0.2.0"
 description = "A CLI and API gateway for managing MCP server connections"
 authors = [
     { name = "kiarina", email = "kiarinadawa@gmail.com" }

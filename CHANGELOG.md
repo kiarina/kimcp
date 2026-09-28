@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-09-29
+
 ### Changed
 
 - **Breaking:** kimcp now runs on the MCP Python SDK 2.x (`mcp>=2.2.0,<3`) directly and no longer depends on LangChain (`langchain-core`, `langchain-mcp-adapters`). It negotiates the 2026-07-28 protocol with servers that support it and falls back to the initialize handshake for MCP 1.x servers.
