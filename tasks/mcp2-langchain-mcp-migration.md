@@ -1,6 +1,6 @@
 # Move from langchain-mcp-adapters to `langchain.mcp` to reach MCP 2
 
-Status: not started.
+Status: investigated (2026-09-29); waiting for a go / no-go decision. See Findings.
 
 ## Background
 
@@ -21,6 +21,45 @@ kimcp cannot move to the MCP Python SDK 2.x while it depends on
   `fastmcp` 4.0.10 goes through `fastmcp-slim`, which requires
   `mcp>=2.0.0,<3.0.0`. The new path therefore puts kimcp on MCP 2.
 - As of 2026-09-28 the lockfile resolves `mcp` 1.30.0, the newest 1.x.
+
+## Findings (2026-09-29)
+
+Measured in
+[labs/2026/09/29/kimcp-mcp2-migration](https://github.com/kiarina/labs/tree/main/2026/09/29/kimcp-mcp2-migration):
+old client (kimcp's current flow) and new client (`fastmcp.Client` + `as_langchain_tool`) against
+an MCP 1 and an MCP 2 server over stdio, SSE and streamable HTTP.
+
+Unchanged:
+
+- All three transports work on the new stack, SSE included (SSE stays on the 2025-11-25 handshake).
+- The new client still reaches MCP 1 servers; it falls back to 2025-11-25 automatically.
+- `tool.ainvoke` returns the same LangChain content blocks, and `isError=True` still comes back as
+  error text rather than an exception, so `run-tool` output keeps its shape.
+
+Needs work in kimcp:
+
+- `StdioTransport` defaults to `keep_alive=True`: leaving the client context leaves the server
+  subprocess running. `disconnect` must also `await client.transport.close()`.
+- Connection fields with no fastmcp equivalent: SSE `timeout`, streamable HTTP `timeout`,
+  `sse_read_timeout`, `terminate_on_close`, stdio `encoding`, and `session_kwargs`. Request timeout
+  moves to `Client(timeout=...)`, auth to `Client(auth=...)`. Dropping fields is a breaking change
+  for the API and CLI.
+- On the 2026-07-28 protocol over streamable HTTP, one request timeout leaves the client
+  disconnected and closing it raises `httpx2.ReadTimeout` (3 of 3 runs). `mode="legacy"` avoids it.
+  Either pin `legacy`, or reconnect after a timeout.
+- Use `fastmcp.Client` directly, not `MCPAdapter`: its interrupt-based elicitation raises
+  `KeyError: '__pregel_scratchpad'` outside a LangGraph run.
+- `langchain.mcp` is beta, and the install grows from 52 to 91 packages. Alternatives:
+  `fastmcp-slim[client]` alone is 51 packages, `mcp` 2.2.0 alone 28, but dropping LangChain changes
+  the `run-tool` output format.
+
+Also found (independent of the migration): today's kimcp, talking to an MCP 2 stdio server, fails
+to disconnect after a request timeout (`anyio.BrokenResourceError`), which `disconnect` logs as a
+warning.
+
+Decisions for the owner: whether to migrate now, which connection fields may be dropped, whether to
+keep LangChain (`langchain[mcp]`) or depend on `fastmcp-slim` / `mcp` directly, and whether to
+publish a new version.
 
 ## What to do
 
