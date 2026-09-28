@@ -1,7 +1,23 @@
 # Move kimcp to MCP 2, dropping LangChain
 
-Status: investigated (2026-09-29). Working premise from the owner: drop LangChain and build on the
-MCP Python SDK. Waiting for the go-ahead to implement. The file name predates that premise.
+Status: implemented and tagged v0.2.0 (2026-09-29); only the PyPI upload is left. The owner approved
+the plan, the output change and a PyPI release. The file name predates the LangChain-free plan.
+
+## Progress (2026-09-29)
+
+- `7542167` moves kimcp onto `mcp` 2.2 with no LangChain. CI passed on Python 3.12 and 3.13.
+- Smoke test with a local gateway: stdio, SSE and streamable HTTP against an MCP 1 and an MCP 2
+  server; connect, list-tools, run-tool (`isError` for failures), disconnect. A stdio server stops on
+  disconnect and on `kimcp shutdown`. No cancel-scope error in the gateway log.
+- `364a9dc` releases v0.2.0 and the tag is pushed. The Release workflow
+  (run 36451557070) created the GitHub Release but the PyPI step failed with `invalid-publisher`:
+  PyPI has no trusted publisher for kimcp. 0.1.0 was uploaded by hand (no provenance on PyPI).
+
+Next: the owner adds the trusted publisher on PyPI (project `kimcp` → Publishing → GitHub: owner
+`kiarina`, repository `kimcp`, workflow `release-pypi.yml`, environment `pypi`), then re-run the
+failed job with `gh run rerun 36451557070 --failed`. `skip-existing` is on, so a re-run is safe.
+Alternatively publish `dist/` by hand with `mise run publish`. When `pip install kimcp==0.2.0` works,
+delete this file.
 
 ## Background
 
